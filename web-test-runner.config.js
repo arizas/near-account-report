@@ -3,10 +3,13 @@ import { readFile, writeFile } from 'fs/promises';
 
 const nearBlocksCacheURL = new URL('testdata/nearblockscache.json', import.meta.url);
 const archiveRpcCacheURL = new URL('testdata/archiverpccache.json', import.meta.url);
+const coingeckoCacheURL = new URL('testdata/coingeckocache.json', import.meta.url);
 
 const nearblockscache = JSON.parse((await readFile(nearBlocksCacheURL)).toString());
 
 const archiveRpcCache = JSON.parse((await readFile(archiveRpcCacheURL)).toString());
+const coingeckocache = JSON.parse((await readFile(coingeckoCacheURL)).toString());
+
 export default {
   files: [
     '**/*.spec.js', // include `.spec.ts` files
@@ -28,6 +31,7 @@ export default {
             import { expect, assert} from 'https://cdn.jsdelivr.net/npm/chai@5.0.0/+esm';
             globalThis.assert = assert;
             globalThis.expect = expect;
+            localStorage.setItem('pikespeakai_api_key','API_KEY');
         </script>        
         <script type="module" src="${testRunnerImport}"></script>
       </body>
@@ -60,6 +64,18 @@ export default {
             await writeFile(nearBlocksCacheURL, JSON.stringify(nearblockscache, null, 1));
           }
           const body = nearblockscache[url];
+          await route.fulfill({ body });
+        });
+        await ctx.route('https://pro-api.coingecko.com/**/*', async (route) => {
+          const url = route.request().url();
+          if (!coingeckocache[url]) {
+            const response = await route.fetch();
+
+            const body = await response.text();
+            coingeckocache[url] = body;
+            await writeFile(coingeckoCacheURL, JSON.stringify(coingeckocache, null, 1));
+          }
+          const body = coingeckocache[url];
           await route.fulfill({ body });
         })
         return ctx;
